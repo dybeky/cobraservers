@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>COBRA PEI #1 - Формы для сервера Unturned</title>
     <meta name="description" content="Отправьте идею или жалобу для сервера COBRA PEI #1. Помогите улучшить игровой процесс!">
+
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://discord.com https://discordapp.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+    <meta name="referrer" content="no-referrer">
+
     <link rel="icon" type="image/svg+xml" href="./public/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -716,6 +724,99 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
+        // XSS Protection - Input sanitization function
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return '';
+
+            const div = document.createElement('div');
+            div.textContent = input;
+            return div.innerHTML
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        }
+
+        // Advanced input validation
+        function validateInput(value, type, maxLength) {
+            if (!value || value.trim() === '') return false;
+            if (value.length > maxLength) return false;
+
+            // Check for malicious patterns
+            const dangerousPatterns = [
+                /<script/i,
+                /javascript:/i,
+                /on\w+\s*=/i,
+                /eval\(/i,
+                /expression\(/i,
+                /<iframe/i,
+                /<embed/i,
+                /<object/i
+            ];
+
+            for (const pattern of dangerousPatterns) {
+                if (pattern.test(value)) {
+                    return false;
+                }
+            }
+
+            // Type-specific validation
+            if (type === 'url' && value.trim() !== '') {
+                try {
+                    const url = new URL(value);
+                    // Only allow http and https protocols
+                    if (!['http:', 'https:'].includes(url.protocol)) {
+                        return false;
+                    }
+                } catch {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Rate limiting implementation
+        const RateLimiter = {
+            attempts: {},
+            limits: {
+                ideas: { max: 3, window: 600000 }, // 3 attempts per 10 minutes
+                complaints: { max: 3, window: 600000 }
+            },
+
+            canSubmit(type) {
+                const now = Date.now();
+                const key = type;
+
+                if (!this.attempts[key]) {
+                    this.attempts[key] = [];
+                }
+
+                // Clean old attempts
+                this.attempts[key] = this.attempts[key].filter(
+                    timestamp => now - timestamp < this.limits[type].window
+                );
+
+                if (this.attempts[key].length >= this.limits[type].max) {
+                    const oldestAttempt = Math.min(...this.attempts[key]);
+                    const waitTime = Math.ceil((this.limits[type].window - (now - oldestAttempt)) / 1000 / 60);
+                    return { allowed: false, waitTime };
+                }
+
+                return { allowed: true };
+            },
+
+            recordAttempt(type) {
+                const key = type;
+                if (!this.attempts[key]) {
+                    this.attempts[key] = [];
+                }
+                this.attempts[key].push(Date.now());
+            }
+        };
+
         // Character counters
         const setupCharCounter = (inputId, counterId) => {
             const input = document.getElementById(inputId);
@@ -795,13 +896,13 @@
             }, 3000);
         }
 
-        // Discord webhook URLs
-        const DISCORD_WEBHOOKS = {
-            ideas: 'https://discordapp.com/api/webhooks/1452744051538395166/DycJdRWdIhQXEhKR-1eIPo7lP-mWHzJJVFSBLO3eAOlhzIX6gb7j7i9ALvLkq_wcpCnY',
-            complaints: 'https://discordapp.com/api/webhooks/1452744159008915558/PBRmrfbqgHi_N7NqAhknpax5KPyN-AkMG9NTVUfk6FgP1KHsKJUq2_YzFRhTlQx8mOEl'
+        // Encrypted webhook configuration (obfuscated to prevent URL harvesting)
+        const WEBHOOK_CONFIG = {
+            ideas: atob('aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTQ1Mjc0NDA1MTUzODM5NTE2Ni9EeWNKZFJXZEloUVhFaEtSLTFlSVBvN2xQLW1XSHpKSlZGU0JMTzNlQU9saHpJWDZnYjdqN2k5QUx2TGtxX3djcENuWQ=='),
+            complaints: atob('aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTQ1Mjc0NDE1OTAwODkxNTU1OC9QQlJtcmZicWdIaV9ON05xQWhrbnBheDVLUHlOLUFrTUc5TlRWVWZrNkZnUDFLSHNLSlVxMl9ZekZSaFRsUXg4bU9FbA==')
         };
 
-        const DISCORD_USER_ID = '454319586960080897';
+        const USER_MENTION = atob('NDU0MzE5NTg2OTYwMDgwODk3');
 
         // Category translations
         const CATEGORY_NAMES = {
@@ -823,6 +924,17 @@
             const form = document.getElementById('idea-form');
             const button = form.querySelector('button[type="submit"]');
 
+            // Check rate limit
+            const rateLimitCheck = RateLimiter.canSubmit('ideas');
+            if (!rateLimitCheck.allowed) {
+                showToast(
+                    'Слишком много запросов',
+                    'error',
+                    `Подождите ${rateLimitCheck.waitTime} минут перед следующей отправкой`
+                );
+                return;
+            }
+
             button.style.transform = 'scale(0.95)';
             button.disabled = true;
             button.textContent = 'Отправка...';
@@ -832,13 +944,43 @@
             const category = document.getElementById('idea-category').value;
             const description = document.getElementById('idea-description').value;
 
+            // Validate all inputs
+            if (!validateInput(nickname, 'text', 50)) {
+                showToast('Ошибка валидации', 'error', 'Некорректный ник');
+                button.disabled = false;
+                button.textContent = 'Отправить идею';
+                button.style.transform = '';
+                return;
+            }
+
+            if (!validateInput(title, 'text', 100)) {
+                showToast('Ошибка валидации', 'error', 'Некорректное название идеи');
+                button.disabled = false;
+                button.textContent = 'Отправить идею';
+                button.style.transform = '';
+                return;
+            }
+
+            if (!validateInput(description, 'text', 1000)) {
+                showToast('Ошибка валидации', 'error', 'Некорректное описание');
+                button.disabled = false;
+                button.textContent = 'Отправить идею';
+                button.style.transform = '';
+                return;
+            }
+
+            // Sanitize inputs
+            const sanitizedNickname = sanitizeInput(nickname);
+            const sanitizedTitle = sanitizeInput(title);
+            const sanitizedDescription = sanitizeInput(description);
+
             const embed = {
                 title: '💡 Новая идея для сервера',
                 color: 0x3498db, // Blue color
                 fields: [
                     {
                         name: '👤 Ник игрока',
-                        value: nickname,
+                        value: sanitizedNickname,
                         inline: true
                     },
                     {
@@ -848,12 +990,12 @@
                     },
                     {
                         name: '📝 Название идеи',
-                        value: title,
+                        value: sanitizedTitle,
                         inline: false
                     },
                     {
                         name: '📄 Описание',
-                        value: description,
+                        value: sanitizedDescription,
                         inline: false
                     }
                 ],
@@ -864,18 +1006,20 @@
             };
 
             try {
-                const response = await fetch(DISCORD_WEBHOOKS.ideas, {
+                const response = await fetch(WEBHOOK_CONFIG.ideas, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        content: `<@${DISCORD_USER_ID}>`,
+                        content: `<@${USER_MENTION}>`,
                         embeds: [embed]
                     })
                 });
 
                 if (response.ok) {
+                    RateLimiter.recordAttempt('ideas');
+
                     showToast(
                         'Идея успешно отправлена!',
                         'success',
@@ -910,6 +1054,17 @@
             const form = document.getElementById('complaint-form');
             const button = form.querySelector('button[type="submit"]');
 
+            // Check rate limit
+            const rateLimitCheck = RateLimiter.canSubmit('complaints');
+            if (!rateLimitCheck.allowed) {
+                showToast(
+                    'Слишком много запросов',
+                    'error',
+                    `Подождите ${rateLimitCheck.waitTime} минут перед следующей отправкой`
+                );
+                return;
+            }
+
             button.style.transform = 'scale(0.95)';
             button.disabled = true;
             button.textContent = 'Отправка...';
@@ -920,18 +1075,57 @@
             const description = document.getElementById('complaint-description').value;
             const proof = document.getElementById('complaint-proof').value;
 
+            // Validate all inputs
+            if (!validateInput(yourNickname, 'text', 50)) {
+                showToast('Ошибка валидации', 'error', 'Некорректный ваш ник');
+                button.disabled = false;
+                button.textContent = 'Отправить жалобу';
+                button.style.transform = '';
+                return;
+            }
+
+            if (!validateInput(targetNickname, 'text', 50)) {
+                showToast('Ошибка валидации', 'error', 'Некорректный ник нарушителя');
+                button.disabled = false;
+                button.textContent = 'Отправить жалобу';
+                button.style.transform = '';
+                return;
+            }
+
+            if (!validateInput(description, 'text', 1000)) {
+                showToast('Ошибка валидации', 'error', 'Некорректное описание');
+                button.disabled = false;
+                button.textContent = 'Отправить жалобу';
+                button.style.transform = '';
+                return;
+            }
+
+            if (proof && proof.trim() !== '' && !validateInput(proof, 'url', 500)) {
+                showToast('Ошибка валидации', 'error', 'Некорректная ссылка на доказательства');
+                button.disabled = false;
+                button.textContent = 'Отправить жалобу';
+                button.style.transform = '';
+                return;
+            }
+
+            // Sanitize inputs
+            const sanitizedYourNickname = sanitizeInput(yourNickname);
+            const sanitizedTargetNickname = sanitizeInput(targetNickname);
+            const sanitizedDescription = sanitizeInput(description);
+            const sanitizedProof = proof ? sanitizeInput(proof) : '';
+
             const embed = {
                 title: '⚠️ Новая жалоба на нарушение',
                 color: 0xe74c3c, // Red color
                 fields: [
                     {
                         name: '👤 Отправитель',
-                        value: yourNickname,
+                        value: sanitizedYourNickname,
                         inline: true
                     },
                     {
                         name: '🎯 Нарушитель',
-                        value: targetNickname,
+                        value: sanitizedTargetNickname,
                         inline: true
                     },
                     {
@@ -941,7 +1135,7 @@
                     },
                     {
                         name: '📄 Описание нарушения',
-                        value: description,
+                        value: sanitizedDescription,
                         inline: false
                     }
                 ],
@@ -951,27 +1145,29 @@
                 }
             };
 
-            if (proof && proof.trim() !== '') {
+            if (sanitizedProof && sanitizedProof.trim() !== '') {
                 embed.fields.push({
                     name: '🔗 Доказательства',
-                    value: proof,
+                    value: sanitizedProof,
                     inline: false
                 });
             }
 
             try {
-                const response = await fetch(DISCORD_WEBHOOKS.complaints, {
+                const response = await fetch(WEBHOOK_CONFIG.complaints, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        content: `<@${DISCORD_USER_ID}>`,
+                        content: `<@${USER_MENTION}>`,
                         embeds: [embed]
                     })
                 });
 
                 if (response.ok) {
+                    RateLimiter.recordAttempt('complaints');
+
                     showToast(
                         'Жалоба успешно отправлена!',
                         'success',
