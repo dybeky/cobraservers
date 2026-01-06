@@ -129,7 +129,7 @@ body.light-theme::after {
 }
 
 .container {
-    max-width: 56rem;
+    max-width: 72rem;
     margin: 0 auto;
     position: relative;
     z-index: 10;
@@ -206,7 +206,7 @@ h2 {
 /* ===== Servers Grid ===== */
 .servers-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -822,6 +822,13 @@ footer div {
 }
 
 /* Servers Grid Responsive */
+@media (max-width: 900px) {
+    .servers-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
 @media (max-width: 600px) {
     .servers-grid {
         grid-template-columns: 1fr;
