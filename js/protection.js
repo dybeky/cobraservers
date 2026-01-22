@@ -1,162 +1,138 @@
-// Advanced Protection System
+// Advanced Protection System v2.0
 (function() {
     'use strict';
 
-    // Блокировка правой кнопки мыши
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        return false;
-    });
-
-    // Блокировка горячих клавиш
-    document.addEventListener('keydown', function(e) {
-        // F12
-        if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+Shift+I (DevTools)
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+Shift+J (Console)
-        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+Shift+C (Inspect Element)
-        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+U (View Source)
-        if (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+S (Save Page)
-        if (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.keyCode === 83)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+P (Print)
-        if (e.ctrlKey && (e.key === 'P' || e.key === 'p' || e.keyCode === 80)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Ctrl+A (Select All)
-        if (e.ctrlKey && (e.key === 'A' || e.key === 'a' || e.keyCode === 65)) {
-            e.preventDefault();
-            return false;
-        }
-
-        // PrintScreen
-        if (e.key === 'PrintScreen' || e.keyCode === 44) {
-            e.preventDefault();
-            return false;
-        }
-    });
-
-    // Детекция DevTools через размер окна
-    let devtoolsOpen = false;
-    let warningShown = false;
-
-    const detectDevTools = function() {
-        const threshold = 160;
-        const widthDiff = window.outerWidth - window.innerWidth;
-        const heightDiff = window.outerHeight - window.innerHeight;
-
-        if (widthDiff > threshold || heightDiff > threshold) {
-            if (!devtoolsOpen) {
-                devtoolsOpen = true;
-                onDevToolsOpen();
-            }
-        } else {
-            if (devtoolsOpen && warningShown) {
-                location.reload();
-            }
-            devtoolsOpen = false;
-        }
+    // ========== CONFIGURATION ==========
+    const CONFIG = {
+        clearConsole: true,
+        blockKeys: true,
+        protectDOM: true
     };
 
-    const onDevToolsOpen = function() {
-        warningShown = true;
-        document.body.innerHTML = `
-            <div style="
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-                color: #FF7C00;
-                font-family: 'Rubik', sans-serif;
-                text-align: center;
-                padding: 20px;
-            ">
-                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
-                <div style="font-size: 24px; font-weight: 600; margin-bottom: 10px;">DevTools Detected</div>
-                <div style="font-size: 16px; color: #a0a0a0;">Закройте инструменты разработчика для продолжения</div>
-            </div>
-        `;
-    };
+    // ========== KEYBOARD BLOCKING ==========
+    if (CONFIG.blockKeys) {
+        document.addEventListener('keydown', function(e) {
+            const blocked = [
+                e.key === 'F12',
+                e.keyCode === 123,
+                e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key),
+                e.ctrlKey && e.shiftKey && [73, 74, 67, 75].includes(e.keyCode),
+                e.ctrlKey && ['U', 'u', 'S', 's', 'P', 'p'].includes(e.key),
+                e.ctrlKey && [85, 83, 80].includes(e.keyCode),
+                e.key === 'PrintScreen',
+                e.keyCode === 44,
+                e.ctrlKey && e.altKey && ['I', 'i', 'J', 'j', 'U', 'u'].includes(e.key),
+                e.metaKey && e.altKey && ['I', 'i', 'J', 'j', 'U', 'u'].includes(e.key),
+                e.metaKey && e.shiftKey && ['C', 'c'].includes(e.key),
+            ];
 
-    setInterval(detectDevTools, 500);
-
-    // Детекция через console.log
-    const element = new Image();
-    Object.defineProperty(element, 'id', {
-        get: function() {
-            onDevToolsOpen();
-        }
-    });
-
-    // Блокировка drag & drop
-    document.addEventListener('dragstart', function(e) {
-        e.preventDefault();
-        return false;
-    });
-
-    // Блокировка выделения текста
-    document.addEventListener('selectstart', function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            return true;
-        }
-        e.preventDefault();
-        return false;
-    });
-
-    // Блокировка копирования
-    document.addEventListener('copy', function(e) {
-        e.preventDefault();
-        return false;
-    });
-
-    // Защита от iframe
-    if (window.self !== window.top) {
-        window.top.location = window.self.location;
+            if (blocked.some(b => b)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
     }
 
-    // Очистка консоли
-    console.clear();
+    // ========== CONTEXT MENU ==========
+    document.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        return false;
+    }, true);
 
-    // Предупреждение в консоли
-    console.log('%c⛔ СТОП!', 'color: #ff4444; font-size: 50px; font-weight: bold; text-shadow: 2px 2px 0 #000;');
-    console.log('%cЭта функция браузера предназначена для разработчиков.', 'color: #FF7C00; font-size: 16px;');
-    console.log('%cЕсли кто-то сказал вам что-то сюда вставить - это мошенники!', 'color: #fff; font-size: 14px;');
+    // ========== SELECTION & COPY ==========
+    document.addEventListener('selectstart', e => {
+        if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            e.preventDefault();
+            return false;
+        }
+    }, true);
 
-    // Периодическая очистка консоли
-    setInterval(function() {
+    document.addEventListener('copy', e => {
+        e.preventDefault();
+        return false;
+    }, true);
+
+    document.addEventListener('cut', e => {
+        e.preventDefault();
+        return false;
+    }, true);
+
+    document.addEventListener('paste', e => {
+        if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            e.preventDefault();
+            return false;
+        }
+    }, true);
+
+    // ========== DRAG & DROP ==========
+    document.addEventListener('dragstart', e => {
+        e.preventDefault();
+        return false;
+    }, true);
+
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        return false;
+    }, true);
+
+    // ========== IFRAME PROTECTION ==========
+    if (window.self !== window.top) {
+        try {
+            window.top.location = window.self.location;
+        } catch (e) {
+            document.documentElement.innerHTML = '';
+        }
+    }
+
+    // ========== DOM PROTECTION ==========
+    if (CONFIG.protectDOM) {
+        const protectedElements = ['particleCanvas', 'themeToggle'];
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.removedNodes.forEach((node) => {
+                    if (node.nodeType === 1 && protectedElements.includes(node.id)) {
+                        location.reload();
+                    }
+                });
+
+                if (mutation.type === 'attributes' && mutation.target.tagName === 'BODY') {
+                    const allowedAttrs = ['class', 'data-effect', 'style'];
+                    if (!allowedAttrs.includes(mutation.attributeName)) {
+                        location.reload();
+                    }
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeOldValue: true
+            });
+        });
+    }
+
+    // ========== CONSOLE WARNING ==========
+    if (CONFIG.clearConsole) {
         console.clear();
-        console.log('%c⛔ СТОП!', 'color: #ff4444; font-size: 50px; font-weight: bold;');
-    }, 5000);
+        console.log('%c⛔ ВНИМАНИЕ!', 'color: #ff4444; font-size: 60px; font-weight: bold; text-shadow: 3px 3px 0 #000;');
+        console.log('%cЭта функция браузера предназначена для разработчиков.', 'color: #FF7C00; font-size: 18px; font-weight: bold;');
+        console.log('%cЕсли вас просят что-то сюда вставить — это мошенники!', 'color: #fff; font-size: 16px;');
+    }
+
+    // ========== HISTORY PROTECTION ==========
+    history.pushState(null, null, location.href);
+    window.addEventListener('popstate', () => {
+        history.pushState(null, null, location.href);
+    });
+
+    // ========== PRINT PROTECTION ==========
+    const printStyle = document.createElement('style');
+    printStyle.textContent = '@media print { body { display: none !important; } }';
+    document.head.appendChild(printStyle);
 
 })();

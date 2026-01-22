@@ -1,31 +1,32 @@
-// Particle Background Animation
-class ParticleBackground {
+// Particle System Controller
+class ParticleSystem {
     constructor() {
         this.canvas = document.getElementById('particleCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.particles = [];
-        // Reduce particles on mobile for better performance
-        this.particleCount = window.innerWidth < 768 ? 40 : 80;
-        this.mouse = { x: null, y: null, radius: 150 };
+        this.currentEffectName = 'stars';
+        this.currentEffect = null;
+        this.effects = {};
+        this.transitioning = false;
+
         this.lastMouseMove = 0;
-        this.mouseThrottleMs = 16; // ~60fps throttle
+        this.mouseThrottleMs = 16;
 
         // Check for reduced motion preference
         this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (this.reducedMotion) {
-            // Don't animate if user prefers reduced motion
             return;
         }
 
         this.init();
-        this.animate();
-        this.setupEventListeners();
     }
 
     init() {
         this.resizeCanvas();
-        this.createParticles();
+        this.initEffects();
+        this.loadSavedEffect();
+        this.setupEventListeners();
+        this.setupEffectSelector();
     }
 
     resizeCanvas() {
@@ -33,126 +34,181 @@ class ParticleBackground {
         this.canvas.height = window.innerHeight;
     }
 
-    createParticles() {
-        this.particles = [];
-        for (let i = 0; i < this.particleCount; i++) {
-            this.particles.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                size: Math.random() * 3 + 1,
-                speedX: (Math.random() - 0.5) * 0.5,
-                speedY: (Math.random() - 0.5) * 0.5,
-                opacity: Math.random() * 0.5 + 0.2
-            });
+    initEffects() {
+        const { WebEffect, MatrixEffect, FirefliesEffect, SnowEffect, StarsEffect } = window.EffectClasses;
+
+        this.effects = {
+            web: new WebEffect(this.canvas, this.ctx),
+            matrix: new MatrixEffect(this.canvas, this.ctx),
+            fireflies: new FirefliesEffect(this.canvas, this.ctx),
+            snow: new SnowEffect(this.canvas, this.ctx),
+            stars: new StarsEffect(this.canvas, this.ctx)
+        };
+    }
+
+    loadSavedEffect() {
+        const savedEffect = localStorage.getItem('particleEffect');
+        if (savedEffect && this.effects[savedEffect]) {
+            this.setEffect(savedEffect, false);
+        } else {
+            this.setEffect('stars', false);
         }
     }
 
-    drawParticles() {
-        const isDarkTheme = !document.body.classList.contains('light-theme');
-        const particleColor = isDarkTheme ? '255, 255, 255' : '0, 0, 0';
+    setEffect(name, animate = true) {
+        if (this.transitioning || !this.effects[name]) return;
 
-        this.particles.forEach(particle => {
-            this.ctx.beginPath();
-            this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            this.ctx.fillStyle = `rgba(${particleColor}, ${particle.opacity})`;
-            this.ctx.fill();
-        });
-    }
+        if (animate && this.currentEffect) {
+            this.transitioning = true;
 
-    connectParticles() {
-        const isDarkTheme = !document.body.classList.contains('light-theme');
-        const lineColor = isDarkTheme ? '255, 255, 255' : '0, 0, 0';
+            // Switch background layer first (it will animate via CSS)
+            this.switchBackgroundLayer(name);
 
-        for (let i = 0; i < this.particles.length; i++) {
-            for (let j = i + 1; j < this.particles.length; j++) {
-                const dx = this.particles[i].x - this.particles[j].x;
-                const dy = this.particles[i].y - this.particles[j].y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+            // Fade out canvas
+            this.canvas.style.transition = 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            this.canvas.style.opacity = '0';
 
-                if (distance < 120) {
-                    this.ctx.beginPath();
-                    this.ctx.strokeStyle = `rgba(${lineColor}, ${0.1 * (1 - distance / 120)})`;
-                    this.ctx.lineWidth = 1;
-                    this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
-                    this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
-                    this.ctx.stroke();
+            // Wait then switch effect
+            setTimeout(() => {
+                // Destroy and switch effect
+                if (this.currentEffect) {
+                    this.currentEffect.destroy();
                 }
-            }
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.currentEffectName = name;
+                this.currentEffect = this.effects[name];
+                this.currentEffect.init();
+                this.currentEffect.animate();
+
+                // Update body data attribute
+                document.body.setAttribute('data-effect', name);
+                localStorage.setItem('particleEffect', name);
+
+                // Fade in canvas
+                this.canvas.style.opacity = '1';
+
+                setTimeout(() => {
+                    this.canvas.style.transition = '';
+                    this.transitioning = false;
+                }, 500);
+            }, 500);
+        } else {
+            this.switchEffect(name);
         }
+
+        // Update active state in dropdown
+        this.updateActiveOption(name);
     }
 
-    updateParticles() {
-        this.particles.forEach(particle => {
-            particle.x += particle.speedX;
-            particle.y += particle.speedY;
+    switchEffect(name) {
+        // Destroy current effect
+        if (this.currentEffect) {
+            this.currentEffect.destroy();
+        }
 
-            // Mouse interaction
-            if (this.mouse.x !== null && this.mouse.y !== null) {
-                const dx = this.mouse.x - particle.x;
-                const dy = this.mouse.y - particle.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < this.mouse.radius) {
-                    const force = (this.mouse.radius - distance) / this.mouse.radius;
-                    const angle = Math.atan2(dy, dx);
-                    particle.x -= Math.cos(angle) * force * 2;
-                    particle.y -= Math.sin(angle) * force * 2;
-                }
-            }
-
-            // Bounce off edges
-            if (particle.x < 0 || particle.x > this.canvas.width) {
-                particle.speedX *= -1;
-                particle.x = Math.max(0, Math.min(particle.x, this.canvas.width));
-            }
-            if (particle.y < 0 || particle.y > this.canvas.height) {
-                particle.speedY *= -1;
-                particle.y = Math.max(0, Math.min(particle.y, this.canvas.height));
-            }
-        });
-    }
-
-    animate() {
+        // Clear canvas for Matrix effect (it uses overlay clearing)
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.drawParticles();
-        this.connectParticles();
-        this.updateParticles();
-        requestAnimationFrame(() => this.animate());
+
+        // Set new effect
+        this.currentEffectName = name;
+        this.currentEffect = this.effects[name];
+        this.currentEffect.init();
+        this.currentEffect.animate();
+
+        // Update body data attribute
+        document.body.setAttribute('data-effect', name);
+
+        // Switch background layers
+        this.switchBackgroundLayer(name);
+
+        // Save to localStorage
+        localStorage.setItem('particleEffect', name);
+    }
+
+    switchBackgroundLayer(name) {
+        // Remove active from all bg layers
+        const layers = document.querySelectorAll('.bg-layer');
+        layers.forEach(layer => layer.classList.remove('active'));
+
+        // Add active to the new layer
+        const newLayer = document.querySelector(`.bg-${name}`);
+        if (newLayer) {
+            newLayer.classList.add('active');
+        }
+    }
+
+    updateActiveOption(effectName) {
+        const options = document.querySelectorAll('.effect-option');
+        options.forEach(option => {
+            if (option.dataset.effect === effectName) {
+                option.classList.add('active');
+            } else {
+                option.classList.remove('active');
+            }
+        });
     }
 
     setupEventListeners() {
+        // Resize handling
         window.addEventListener('resize', () => {
             this.resizeCanvas();
-            // Update particle count on resize
-            this.particleCount = window.innerWidth < 768 ? 40 : 80;
-            this.createParticles();
+
+            // Reinitialize effects with new dimensions
+            Object.values(this.effects).forEach(effect => {
+                effect.canvas = this.canvas;
+                effect.ctx = this.ctx;
+            });
+
+            // Recreate particles for current effect
+            if (this.currentEffect) {
+                this.currentEffect.createParticles();
+            }
         });
 
-        // Throttled mousemove for better performance
+        // Throttled mousemove
         window.addEventListener('mousemove', (e) => {
             const now = Date.now();
             if (now - this.lastMouseMove >= this.mouseThrottleMs) {
-                this.mouse.x = e.x;
-                this.mouse.y = e.y;
+                if (this.currentEffect) {
+                    this.currentEffect.setMouse(e.x, e.y);
+                }
                 this.lastMouseMove = now;
             }
         });
 
         window.addEventListener('mouseout', () => {
-            this.mouse.x = null;
-            this.mouse.y = null;
+            if (this.currentEffect) {
+                this.currentEffect.clearMouse();
+            }
         });
 
         // Listen for reduced motion changes
         window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
             if (e.matches) {
                 this.reducedMotion = true;
+                if (this.currentEffect) {
+                    this.currentEffect.destroy();
+                }
             }
+        });
+    }
+
+    setupEffectSelector() {
+        const options = document.querySelectorAll('.effect-option');
+
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                const effectName = option.dataset.effect;
+                if (effectName && effectName !== this.currentEffectName) {
+                    this.setEffect(effectName, true);
+                }
+            });
         });
     }
 }
 
-// Initialize particle background when DOM is loaded
+// Initialize particle system when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new ParticleBackground();
+    window.particleSystem = new ParticleSystem();
 });
