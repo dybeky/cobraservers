@@ -5,28 +5,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const minutesEl = document.getElementById('minutes');
     const secondsEl = document.getElementById('seconds');
     const wipeDateEl = document.getElementById('wipeDate');
+    const wipeProgressEl = document.getElementById('wipeProgress');
 
     if (!daysEl || !hoursEl || !minutesEl || !secondsEl) return;
 
     // Configuration
     const WIPE_CONFIG = {
-        // Initial wipe date: January 10, 2026 at 00:00 Moscow time (UTC+3)
-        initialWipeDate: new Date('2026-01-10T00:00:00+03:00'),
-        // Wipe interval in days
+        // Wipe happens at 00:00 Moscow time (UTC+3)
+        // January 23, 2026
+        referenceWipeDate: new Date('2026-01-24T00:00:00+03:00'),
+        // Wipe interval in days (every 2 weeks = 14 days)
         wipeIntervalDays: 14
     };
 
-    // Calculate next wipe date
+    // Calculate next wipe date (always Saturday at 00:00 MSK = night from Friday to Saturday)
     function getNextWipeDate() {
         const now = new Date();
-        let nextWipe = new Date(WIPE_CONFIG.initialWipeDate);
+        let nextWipe = new Date(WIPE_CONFIG.referenceWipeDate);
 
-        // If initial date has passed, calculate next wipe
+        // If reference date is in the future, go back to find the cycle start
+        while (nextWipe > now) {
+            nextWipe.setDate(nextWipe.getDate() - WIPE_CONFIG.wipeIntervalDays);
+        }
+
+        // Now go forward to find the next wipe
         while (nextWipe <= now) {
             nextWipe.setDate(nextWipe.getDate() + WIPE_CONFIG.wipeIntervalDays);
         }
 
         return nextWipe;
+    }
+
+    // Calculate previous wipe date (for progress bar)
+    function getPreviousWipeDate() {
+        const nextWipe = getNextWipeDate();
+        const prevWipe = new Date(nextWipe);
+        prevWipe.setDate(prevWipe.getDate() - WIPE_CONFIG.wipeIntervalDays);
+        return prevWipe;
+    }
+
+    // Calculate progress percentage
+    function getWipeProgress() {
+        const now = new Date();
+        const prevWipe = getPreviousWipeDate();
+        const nextWipe = getNextWipeDate();
+
+        const totalTime = nextWipe - prevWipe;
+        const elapsedTime = now - prevWipe;
+
+        return Math.min(100, Math.max(0, (elapsedTime / totalTime) * 100));
     }
 
     // Format date for display
@@ -36,13 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
             'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
         ];
 
+        const weekDays = [
+            'воскресенье', 'понедельник', 'вторник', 'среда',
+            'четверг', 'пятница', 'суббота'
+        ];
+
+        const dayOfWeek = weekDays[date.getDay()];
         const day = date.getDate();
         const month = months[date.getMonth()];
         const year = date.getFullYear();
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
 
-        return `${day} ${month} ${year} в ${hours}:${minutes}`;
+        return `${dayOfWeek}, ${day} ${month} ${year} в ${hours}:${minutes}`;
     }
 
     // Update timer display
@@ -86,10 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
             secondsEl.textContent = newSeconds;
         }
 
-        // Update wipe date text
-        if (wipeDateEl) {
-            wipeDateEl.textContent = formatWipeDate(nextWipe);
+
+        // Update progress bar
+        if (wipeProgressEl) {
+            const progress = getWipeProgress();
+            wipeProgressEl.style.width = `${progress}%`;
         }
+
     }
 
     // Add brief animation to element

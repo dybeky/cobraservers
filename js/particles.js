@@ -4,8 +4,19 @@ class ParticleBackground {
         this.canvas = document.getElementById('particleCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.particles = [];
-        this.particleCount = 80;
+        // Reduce particles on mobile for better performance
+        this.particleCount = window.innerWidth < 768 ? 40 : 80;
         this.mouse = { x: null, y: null, radius: 150 };
+        this.lastMouseMove = 0;
+        this.mouseThrottleMs = 16; // ~60fps throttle
+
+        // Check for reduced motion preference
+        this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (this.reducedMotion) {
+            // Don't animate if user prefers reduced motion
+            return;
+        }
 
         this.init();
         this.animate();
@@ -112,17 +123,31 @@ class ParticleBackground {
     setupEventListeners() {
         window.addEventListener('resize', () => {
             this.resizeCanvas();
+            // Update particle count on resize
+            this.particleCount = window.innerWidth < 768 ? 40 : 80;
             this.createParticles();
         });
 
+        // Throttled mousemove for better performance
         window.addEventListener('mousemove', (e) => {
-            this.mouse.x = e.x;
-            this.mouse.y = e.y;
+            const now = Date.now();
+            if (now - this.lastMouseMove >= this.mouseThrottleMs) {
+                this.mouse.x = e.x;
+                this.mouse.y = e.y;
+                this.lastMouseMove = now;
+            }
         });
 
         window.addEventListener('mouseout', () => {
             this.mouse.x = null;
             this.mouse.y = null;
+        });
+
+        // Listen for reduced motion changes
+        window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+            if (e.matches) {
+                this.reducedMotion = true;
+            }
         });
     }
 }

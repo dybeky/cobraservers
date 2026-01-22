@@ -15,8 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const copyIpBtn = card.querySelector('.copy-ip-btn');
         const copyNotification = card.querySelector('.copy-notification');
         const statusIndicator = card.querySelector('.status-indicator');
+        const connectBtn = card.querySelector('.connect-btn');
 
         let currentServerIP = '';
+
+        // Add skeleton loading initially
+        if (statusText) statusText.classList.add('skeleton');
+        if (serverIPElement) serverIPElement.classList.add('skeleton');
 
         async function checkServerStatus() {
             try {
@@ -48,6 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         currentServerIP = `${serverIP}:${serverPort}`;
                         if (serverIPElement) {
                             serverIPElement.textContent = `IP: ${currentServerIP}`;
+                            serverIPElement.classList.remove('skeleton');
+                        }
+                        // Update connect button with Steam protocol
+                        if (connectBtn) {
+                            connectBtn.href = `steam://connect/${currentServerIP}`;
                         }
                     }
 
@@ -75,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (statusText) {
                 statusText.textContent = message;
+                statusText.classList.remove('skeleton');
             }
         }
 
