@@ -1,5 +1,5 @@
 // Statistics API Module
-// Handles data fetching from BattleMetrics via Cloudflare Worker proxy
+// Handles data fetching from BattleMetrics API
 
 (function() {
     'use strict';
@@ -223,8 +223,7 @@
         return data;
     }
 
-    // Fetch leaderboard data
-    // Note: Leaderboard API requires authentication, so we use mock data for now
+    // Fetch leaderboard data (requires authentication - using demo data)
     async function fetchLeaderboard(serverId, period) {
         const cacheKey = getCacheKey('leaderboard', serverId, period);
 
@@ -240,9 +239,7 @@
             return localCached;
         }
 
-        // Leaderboard requires auth - use demo data
-        // In future, this can be enabled via authenticated Worker
-        console.info('Leaderboard API requires authentication, using demo data');
+        // Leaderboard API requires authentication - use demo data
         const mockData = generateMockLeaderboardData();
 
         cache.leaderboard[cacheKey] = { data: mockData, timestamp: Date.now() };
