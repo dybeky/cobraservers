@@ -4,10 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const hoursEl = document.getElementById('hours');
     const minutesEl = document.getElementById('minutes');
     const secondsEl = document.getElementById('seconds');
-    const wipeDateEl = document.getElementById('wipeDate');
     const wipeProgressEl = document.getElementById('wipeProgress');
 
     if (!daysEl || !hoursEl || !minutesEl || !secondsEl) return;
+
+    let timerIntervalId = null;
 
     // Configuration
     const WIPE_CONFIG = {
@@ -140,5 +141,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTimer();
 
     // Update every second
-    setInterval(updateTimer, 1000);
+    timerIntervalId = setInterval(updateTimer, 1000);
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (timerIntervalId) {
+            clearInterval(timerIntervalId);
+        }
+    });
 });

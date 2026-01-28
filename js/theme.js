@@ -13,6 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toggle theme on button click
     themeToggle.addEventListener('click', () => {
+        // Add will-change for GPU acceleration before animation
+        body.style.willChange = 'background-color, color';
+        document.querySelectorAll('.bg-layer, .bg-overlay').forEach(el => {
+            el.style.willChange = 'opacity, background';
+        });
+
         body.classList.toggle('light-theme');
 
         // Save theme preference
@@ -21,7 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add ripple effect on button
         createRipple(themeToggle);
+
+        // Remove will-change after transition completes (350ms)
+        setTimeout(() => {
+            body.style.willChange = '';
+            document.querySelectorAll('.bg-layer, .bg-overlay').forEach(el => {
+                el.style.willChange = '';
+            });
+        }, 350);
     });
+
+    // Expose toggle function for keyboard shortcuts
+    window.toggleTheme = () => {
+        themeToggle.click();
+    };
 
     // Create ripple effect
     function createRipple(button) {

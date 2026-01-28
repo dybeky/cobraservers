@@ -7,9 +7,18 @@ class ParticleSystem {
         this.currentEffect = null;
         this.effects = {};
         this.transitioning = false;
+        this.transitionTimeout = null; // For race condition fix
 
         this.lastMouseMove = 0;
         this.mouseThrottleMs = 16;
+
+        // Bound handlers for cleanup
+        this.boundHandlers = {
+            resize: null,
+            mousemove: null,
+            mouseout: null,
+            reducedMotion: null
+        };
 
         // Check for reduced motion preference
         this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -58,6 +67,12 @@ class ParticleSystem {
     setEffect(name, animate = true) {
         if (this.transitioning || !this.effects[name]) return;
 
+        // Cancel any pending transition (race condition fix)
+        if (this.transitionTimeout) {
+            clearTimeout(this.transitionTimeout);
+            this.transitionTimeout = null;
+        }
+
         if (animate && this.currentEffect) {
             this.transitioning = true;
 
@@ -65,11 +80,11 @@ class ParticleSystem {
             this.switchBackgroundLayer(name);
 
             // Fade out canvas
-            this.canvas.style.transition = 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            this.canvas.style.transition = 'opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             this.canvas.style.opacity = '0';
 
             // Wait then switch effect
-            setTimeout(() => {
+            this.transitionTimeout = setTimeout(() => {
                 // Destroy and switch effect
                 if (this.currentEffect) {
                     this.currentEffect.destroy();
@@ -88,11 +103,12 @@ class ParticleSystem {
                 // Fade in canvas
                 this.canvas.style.opacity = '1';
 
-                setTimeout(() => {
+                this.transitionTimeout = setTimeout(() => {
                     this.canvas.style.transition = '';
                     this.transitioning = false;
-                }, 500);
-            }, 500);
+                    this.transitionTimeout = null;
+                }, 300);
+            }, 300);
         } else {
             this.switchEffect(name);
         }
@@ -151,7 +167,7 @@ class ParticleSystem {
 
     setupEventListeners() {
         // Resize handling
-        window.addEventListener('resize', () => {
+        this.boundHandlers.resize = () => {
             this.resizeCanvas();
 
             // Reinitialize effects with new dimensions
@@ -164,10 +180,11 @@ class ParticleSystem {
             if (this.currentEffect) {
                 this.currentEffect.createParticles();
             }
-        });
+        };
+        window.addEventListener('resize', this.boundHandlers.resize);
 
         // Throttled mousemove
-        window.addEventListener('mousemove', (e) => {
+        this.boundHandlers.mousemove = (e) => {
             const now = Date.now();
             if (now - this.lastMouseMove >= this.mouseThrottleMs) {
                 if (this.currentEffect) {
@@ -175,23 +192,26 @@ class ParticleSystem {
                 }
                 this.lastMouseMove = now;
             }
-        });
+        };
+        window.addEventListener('mousemove', this.boundHandlers.mousemove);
 
-        window.addEventListener('mouseout', () => {
+        this.boundHandlers.mouseout = () => {
             if (this.currentEffect) {
                 this.currentEffect.clearMouse();
             }
-        });
+        };
+        window.addEventListener('mouseout', this.boundHandlers.mouseout);
 
         // Listen for reduced motion changes
-        window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+        this.boundHandlers.reducedMotion = (e) => {
             if (e.matches) {
                 this.reducedMotion = true;
                 if (this.currentEffect) {
                     this.currentEffect.destroy();
                 }
             }
-        });
+        };
+        window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', this.boundHandlers.reducedMotion);
     }
 
     setupEffectSelector() {
@@ -206,9 +226,47 @@ class ParticleSystem {
             });
         });
     }
+
+    // Destroy method for cleanup
+    destroy() {
+        // Cancel pending transitions
+        if (this.transitionTimeout) {
+            clearTimeout(this.transitionTimeout);
+            this.transitionTimeout = null;
+        }
+
+        // Destroy current effect
+        if (this.currentEffect) {
+            this.currentEffect.destroy();
+        }
+
+        // Remove event listeners
+        if (this.boundHandlers.resize) {
+            window.removeEventListener('resize', this.boundHandlers.resize);
+        }
+        if (this.boundHandlers.mousemove) {
+            window.removeEventListener('mousemove', this.boundHandlers.mousemove);
+        }
+        if (this.boundHandlers.mouseout) {
+            window.removeEventListener('mouseout', this.boundHandlers.mouseout);
+        }
+        if (this.boundHandlers.reducedMotion) {
+            window.matchMedia('(prefers-reduced-motion: reduce)').removeEventListener('change', this.boundHandlers.reducedMotion);
+        }
+
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
 }
 
 // Initialize particle system when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.particleSystem = new ParticleSystem();
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (window.particleSystem) {
+            window.particleSystem.destroy();
+        }
+    });
 });
