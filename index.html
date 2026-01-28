@@ -295,49 +295,6 @@
                     </div>
                 </div>
 
-                <!-- Leaderboard -->
-                <div class="stats-card">
-                    <h3 class="stats-card-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
-                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
-                            <path d="M4 22h16"></path>
-                            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
-                            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
-                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
-                        </svg>
-                        Топ-10 по времени
-                    </h3>
-                    <div class="stats-leaderboard-container">
-                        <div class="stats-leaderboard-skeleton" id="leaderboardSkeleton">
-                            <div class="skeleton-row"></div>
-                            <div class="skeleton-row"></div>
-                            <div class="skeleton-row"></div>
-                            <div class="skeleton-row"></div>
-                            <div class="skeleton-row"></div>
-                        </div>
-                        <table class="stats-leaderboard hidden" id="leaderboardTable">
-                            <thead>
-                                <tr>
-                                    <th class="lb-rank">#</th>
-                                    <th class="lb-name">Игрок</th>
-                                    <th class="lb-hours">Часы</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leaderboardBody">
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="stats-error hidden" id="leaderboardError">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                        <span>Не удалось загрузить данные</span>
-                        <button class="stats-retry-btn" id="leaderboardRetryBtn">Повторить</button>
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -390,7 +347,6 @@
     <script src="js/shortcuts.js"></script>
     <script src="js/stats-api.js"></script>
     <script src="js/stats-chart.js"></script>
-    <script src="js/stats-leaderboard.js"></script>
     <script src="js/stats.js"></script>
 </body>
 </html>

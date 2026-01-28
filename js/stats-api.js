@@ -20,8 +20,7 @@
 
     // Cache storage
     const cache = {
-        history: {},
-        leaderboard: {}
+        history: {}
     };
 
     // Check if cached data is still valid
@@ -223,61 +222,6 @@
         return data;
     }
 
-    // Fetch leaderboard data (requires authentication - using demo data)
-    async function fetchLeaderboard(serverId, period) {
-        const cacheKey = getCacheKey('leaderboard', serverId, period);
-
-        // Check memory cache
-        if (cache.leaderboard[cacheKey] && isCacheValid(cache.leaderboard[cacheKey])) {
-            return cache.leaderboard[cacheKey].data;
-        }
-
-        // Check localStorage cache
-        const localCached = loadFromLocalCache(cacheKey);
-        if (localCached) {
-            cache.leaderboard[cacheKey] = { data: localCached, timestamp: Date.now() };
-            return localCached;
-        }
-
-        // Leaderboard API requires authentication - use demo data
-        const mockData = generateMockLeaderboardData();
-
-        cache.leaderboard[cacheKey] = { data: mockData, timestamp: Date.now() };
-        saveToLocalCache(cacheKey, mockData);
-
-        return mockData;
-    }
-
-    // Process leaderboard data from API response
-    function processLeaderboardData(data) {
-        if (!data || !data.data) {
-            return [];
-        }
-
-        return data.data.slice(0, 10).map((player, index) => ({
-            rank: index + 1,
-            name: player.attributes.name || 'Unknown Player',
-            hours: Math.round((player.attributes.value || 0) / 60 * 10) / 10, // Convert minutes to hours
-            playerId: player.id
-        }));
-    }
-
-    // Generate mock leaderboard data for demo
-    function generateMockLeaderboardData() {
-        const names = [
-            'xXProGamerXx', 'ShadowHunter', 'NightWolf', 'PhantomKnight',
-            'StormRider', 'FireDragon', 'IceQueen', 'ThunderBolt',
-            'DarkAssassin', 'SilentSniper', 'BlazeRunner', 'CyberNinja'
-        ];
-
-        return names.slice(0, 10).map((name, index) => ({
-            rank: index + 1,
-            name: name,
-            hours: Math.round((100 - index * 8 + Math.random() * 10) * 10) / 10,
-            playerId: `mock_${index}`
-        }));
-    }
-
     // Fetch data for all servers
     async function fetchAllServersHistory(period, customStart, customEnd) {
         const serverIds = Object.keys(CONFIG.servers);
@@ -300,7 +244,6 @@
     // Clear all caches
     function clearCache() {
         cache.history = {};
-        cache.leaderboard = {};
 
         // Clear localStorage cache
         const keys = Object.keys(localStorage);
@@ -314,7 +257,6 @@
     // Expose API
     window.CobraStatsAPI = {
         fetchPlayerHistory,
-        fetchLeaderboard,
         fetchAllServersHistory,
         clearCache,
         getDateRange,

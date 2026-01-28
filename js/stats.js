@@ -34,8 +34,7 @@
             dateStart: document.getElementById('statsDateStart'),
             dateEnd: document.getElementById('statsDateEnd'),
             dateApply: document.getElementById('statsDateApply'),
-            chartRetryBtn: document.getElementById('chartRetryBtn'),
-            leaderboardRetryBtn: document.getElementById('leaderboardRetryBtn')
+            chartRetryBtn: document.getElementById('chartRetryBtn')
         };
     }
 
@@ -83,11 +82,6 @@
             });
         }
 
-        if (elements.leaderboardRetryBtn) {
-            elements.leaderboardRetryBtn.addEventListener('click', () => {
-                loadLeaderboardData();
-            });
-        }
     }
 
     // Initialize date inputs with default values
@@ -152,10 +146,7 @@
 
         state.isLoading = true;
 
-        await Promise.all([
-            loadChartData(),
-            loadLeaderboardData()
-        ]);
+        await loadChartData();
 
         state.isLoading = false;
     }
@@ -198,39 +189,6 @@
             console.error('Failed to load chart data:', error);
             CobraStatsChart.hideLoading();
             CobraStatsChart.showError();
-        }
-    }
-
-    // Load leaderboard data
-    async function loadLeaderboardData() {
-        const { CobraStatsAPI, CobraStatsLeaderboard } = window;
-
-        if (!CobraStatsAPI || !CobraStatsLeaderboard) {
-            console.error('Stats modules not loaded');
-            return;
-        }
-
-        CobraStatsLeaderboard.showLoading();
-        CobraStatsLeaderboard.hideError();
-
-        try {
-            // Determine leaderboard period
-            let leaderboardPeriod = '7d';
-            if (state.currentPeriod === '30d' || state.currentPeriod === 'custom') {
-                leaderboardPeriod = '30d';
-            }
-
-            const data = await CobraStatsAPI.fetchLeaderboard(
-                state.currentServer === 'all' ? '34747819' : state.currentServer, // Default to PEI if all
-                leaderboardPeriod
-            );
-
-            CobraStatsLeaderboard.hideLoading();
-            CobraStatsLeaderboard.renderLeaderboard(data);
-        } catch (error) {
-            console.error('Failed to load leaderboard data:', error);
-            CobraStatsLeaderboard.hideLoading();
-            CobraStatsLeaderboard.showError();
         }
     }
 

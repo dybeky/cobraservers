@@ -2123,110 +2123,6 @@ body.light-theme .stats-date-input::-webkit-calendar-picker-indicator {
 .stats-chart-skeleton .skeleton-bar:nth-child(4) { height: 70%; }
 .stats-chart-skeleton .skeleton-bar:nth-child(5) { height: 55%; }
 
-/* Leaderboard */
-.stats-leaderboard-container {
-    position: relative;
-    min-height: 200px;
-}
-
-.stats-leaderboard-skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.stats-leaderboard-skeleton.hidden {
-    display: none;
-}
-
-.stats-leaderboard-skeleton .skeleton-row {
-    height: 44px;
-    background: linear-gradient(
-        90deg,
-        var(--bg-secondary) 0%,
-        var(--bg-card) 20%,
-        var(--bg-secondary) 40%,
-        var(--bg-secondary) 100%
-    );
-    background-size: 400% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-    border-radius: 6px;
-}
-
-.stats-leaderboard {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.stats-leaderboard.hidden {
-    display: none;
-}
-
-.stats-leaderboard th,
-.stats-leaderboard td {
-    padding: 12px 16px;
-    text-align: left;
-}
-
-.stats-leaderboard th {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--bg-secondary);
-}
-
-.stats-leaderboard td {
-    font-size: 0.95rem;
-    border-bottom: 1px solid var(--bg-secondary);
-    transition: background 0.3s ease;
-}
-
-.stats-leaderboard tbody tr:hover td {
-    background: var(--bg-secondary);
-}
-
-.stats-leaderboard tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.stats-leaderboard .lb-rank {
-    width: 60px;
-    text-align: center;
-}
-
-.stats-leaderboard .lb-hours {
-    width: 80px;
-    text-align: right;
-}
-
-.stats-leaderboard .lb-name {
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-/* Rank Medals */
-.stats-leaderboard .rank-gold {
-    color: #FFD700;
-    font-size: 1.2rem;
-}
-
-.stats-leaderboard .rank-silver {
-    color: #C0C0C0;
-    font-size: 1.2rem;
-}
-
-.stats-leaderboard .rank-bronze {
-    color: #CD7F32;
-    font-size: 1.2rem;
-}
-
-.stats-leaderboard .rank-number {
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-
 /* Error State */
 .stats-error {
     display: flex;
@@ -2322,22 +2218,6 @@ body.light-theme .stats-date-input::-webkit-calendar-picker-indicator {
         font-size: 1rem;
     }
 
-    .stats-leaderboard th,
-    .stats-leaderboard td {
-        padding: 10px 12px;
-    }
-
-    .stats-leaderboard td {
-        font-size: 0.9rem;
-    }
-
-    .stats-leaderboard .lb-rank {
-        width: 50px;
-    }
-
-    .stats-leaderboard .lb-hours {
-        width: 70px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -2368,22 +2248,4 @@ body.light-theme .stats-date-input::-webkit-calendar-picker-indicator {
         margin-bottom: 12px;
     }
 
-    .stats-leaderboard th,
-    .stats-leaderboard td {
-        padding: 8px 10px;
-    }
-
-    .stats-leaderboard td {
-        font-size: 0.85rem;
-    }
-
-    .stats-leaderboard .lb-rank {
-        width: 40px;
-        padding-left: 6px;
-        padding-right: 6px;
-    }
-
-    .stats-leaderboard .lb-hours {
-        width: 60px;
-    }
 }
